@@ -7,7 +7,7 @@
   <meta http-equiv="Content-Style-Type" content="text/css" />
   <meta name="generator" content="pandoc" />
   <meta name="author" content="Nick Apostolakis" />
-  <title>VM automation</title>
+  <title>Automated vm generation</title>
   <style type="text/css">code{white-space: pre;}</style>
   <link rel="stylesheet" type="text/css" media="screen, projection, print"
     href="http://www.w3.org/Talks/Tools/Slidy2/styles/slidy.css" />
@@ -16,23 +16,20 @@
 </head>
 <body>
 <div class="slide titlepage">
-  <h1 class="title">VM automation</h1>
+  <h1 class="title">Automated vm generation</h1>
   <p class="author">
 Nick Apostolakis
   </p>
   <p class="date">27th of February 2015</p>
 </div>
-<div id="how-it-all-begun" class="slide section level1">
-<h1>How it all begun</h1>
-<p>We needed :</p>
+<div id="a-walkthrough-of-the-technologies-used-in-ncr-edinburgh" class="slide section level1">
+<h1>A walkthrough of the technologies used in NCR Edinburgh</h1>
+<p>The goal is to create a fully configured vm artifact ready to be imported in the virtualization software of choice. We will use VirtualBox for the development system</p>
 <ul>
-<li>High utilization of existing infrastructure</li>
-<li>Isolation between services</li>
-<li>Speed in provisioning of new systems</li>
-<li>Standarization of systems and services deployment accross environments</li>
-<li>Automation</li>
-<li>QA (testing)</li>
-<li>Tooling for management of the state of vm clusters</li>
+<li><a href="https://www.packer.io/">Packer</a> This is used for the creation of custom Vagrant boxes</li>
+<li><a href="https://www.vagrantup.com/">Vagrant</a> Vagrant will be used to generate the finished product</li>
+<li><a href="https://downloads.chef.io/chef-dk/">Berkshelf</a> Part of Chef Development toolkit. Used for defining cookbook dependencies</li>
+<li>Vagrant-berkshelf The vagrant backend that is used to transfer the cookbooks on the new vm</li>
 </ul>
 </div>
 <div id="enter-configuration-and-vm-managment-systems" class="slide section level1">

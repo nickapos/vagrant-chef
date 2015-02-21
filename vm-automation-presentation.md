@@ -1,18 +1,15 @@
-% VM automation
+% Automated vm generation
 % Nick Apostolakis
 % 27th of February 2015
 
-# How it all begun
+# A walkthrough of the technologies used in NCR Edinburgh
 
-We needed :
+The goal is to create a fully configured vm artifact ready to be imported in the virtualization software of choice. We will use VirtualBox for the development system
 
-  * High utilization of existing infrastructure
-  * Isolation between services
-  * Speed in provisioning of new systems
-  * Standarization of systems and services deployment accross environments
-  * Automation
-  * QA (testing)
-  * Tooling for management of the state of vm clusters
+  * [Packer](https://www.packer.io/) This is used for the creation of custom Vagrant boxes
+  * [Vagrant](https://www.vagrantup.com/) Vagrant will be used to generate the finished product
+  * [Berkshelf](https://downloads.chef.io/chef-dk/) Part of Chef Development toolkit. Used for defining cookbook dependencies
+  * Vagrant-berkshelf The vagrant backend that is used to transfer the cookbooks on the new vm
 
 # Enter configuration and vm managment systems
 
