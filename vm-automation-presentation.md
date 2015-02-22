@@ -9,7 +9,7 @@ The goal is to create a fully configured vm artifact ready to be imported in the
   * [Packer](https://www.packer.io/) This is used for the creation of custom Vagrant boxes
   * [Berkshelf](https://downloads.chef.io/chef-dk/) Part of Chef Development toolkit. Used for defining cookbook dependencies
   * [Chef](https://downloads.chef.io/chef-dk/)
-  * Vagrant-berkshelf The vagrant plugin that is used to transfer the cookbooks on the new vm
+  * [Vagrant-berkshelf](https://github.com/berkshelf/vagrant-berkshelf) The vagrant plugin that is used to transfer the cookbooks on the new vm
   * [Vagrant](https://www.vagrantup.com/) Vagrant will be used to generate the finished product
 
 # Packer
@@ -88,7 +88,7 @@ For the purposes of this presentation we are going to use a very simple cookbook
 Core chef concepts:
   
   * Cookbook attributes
-  * The runlist
+  * The run_list
 
 ## Cookbook attributes
 
@@ -102,10 +102,111 @@ These are the default values defined in the cookbook. An empty array list of pac
 
 ------------------------------------------------
 
-## A chef runlist
+## A chef run_list
+
+A run-list is:
+
+  * An ordered list of roles and/or recipes that are run in an exact order; if a recipe appears more than once in the run-list, the chef-client will never run that recipe twice
+  * Always specific to the node on which it runs, though it is possible for many nodes to have run-lists that are similar or even identical 
+  * Stored as part of the node object on the Chef server
+  * Maintained using knife and uploaded to the Chef server or via the Chef management console user interface
+
+In the chef-solo context, a run_list is limited to a specific chef-solo run and isolated on the vm it is running, it does not require any external chef resources (e.g chef server)
+
+Plainly put, a run_list is the list of the recipes we want to execute from one or more cookbooks. These cookbooks need to be available and accessible on a predefined location.
+
+It looks like this: 
+
+    { "run_list": ["recipe[packages::default]", "recipe[anotherthing]"] }
 
 # Vagrant-berkshelf
 
+Vagrant Berkshelf is a Vagrant plugin that adds Berkshelf integration to the Chef provisioners. Vagrant Berkshelf will automatically download and install cookbooks onto the Vagrant Virtual Machine. 
+
+If the Vagrant Berkshelf plugin is installed, it will intelligently detect when a Berksfile is present in the same working directory as the Vagrantfile.
+
+Vagrant-berkshelf is installed using the following command:
+
+    vagrant plugin install vagrant-berkshelf
+
 # Vagrant
+
+Vagrant is a tool for building complete development environments. With an easy-to-use workflow and focus on automation. 
+
+It uses pre packaged templates called boxes as a starting point and is using an open extendable interface in order to provide more features in the form of plugins. Vagrant-berkshelf is one of those plugins, and that makes work with chef a lot easier. 
+
+There are a lot of freely available community vagrant boxes for any platform imaginable. In NCR Edinburgh we build our own from the official CentOS sources.
+
+Vagrant supports out of the box a number of provisioners, among themselves chef and salt. In the following example we are going to use the chef provisioner.
+
+It also supports a number of virtualisation providers, with VirtualBox as a default and VMWare as the suggested platform for production environments. All these providers are distributed as vagrant plugins
+
+Vagrant is controlled by a single file called Vagrantfile
+
+  * Example Vagrantfiles can be found [here](https://github.com/patrickdlee/vagrant-examples)
+
+------------------------------------------------------------
+
+## The most important vagrant commands
+
+  * _vagrant plugin install plugin-name_ (installs vagrant plugins)
+  * _vagrant up_ (imports the base box in the local vagrant repo and starts the new vm)
+  * _vagrant provision_ (runs the provisioner blocks)
+  * _vagrant ssh_ (logs into the new vm)
+  * _vagrant reload_ (restarts vagrant machine, loads new Vagrantfile configuration)
+  * _vagrant halt_ (stops the vagrant machine)
+  * _vagrant destroy_ (stops and deletes all the files of the vagrant machine)
+
+
+All the vagrant vms appear as VirtualBox vms, so you can use VirtualBox interface to export a vm to and ova
+
+--------------------------------------------------------------
+## Vagrantfile
+
+A Vagrant file looks like this:
+
+    # -*- mode: ruby -*-"
+    # vi: set ft=ruby :
+
+    box_type  = "chef/centos-6.6"
+
+    Vagrant.configure("2") do |config|
+      config.vm.box = "#{box_type}"
+      config.berkshelf.enabled = true
+
+      # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      # Add user list
+      # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      config.vm.provision "chef_solo" do |chef|
+        chef.json = {
+          "packages" => ['git','openssl' ]
+        }
+        chef.add_recipe "packages::default"
+      end
+
+    end
+
+# The packages cookbook recipe
+
+The cookbook recipe we are executing with this vagrant file goes through the following operations:
+
+    Chef::Log.info "packages:#{node['packages'].inspect}"
+    
+    if node['packages'].is_a?(Array)
+      node['packages'].each do |pkg|
+        package pkg do
+          action node['packages_default_action'].to_sym
+        end
+      end
+    elsif node['packages'].is_a?(Hash)
+      node['packages'].each do |pkg, act|
+        package pkg.to_s do
+          action act.to_sym
+        end
+      end
+    else
+      Chef::Log.warn('`node["packages"]` must be an Array or Hash.')
+    end
+
 
 #Questions?

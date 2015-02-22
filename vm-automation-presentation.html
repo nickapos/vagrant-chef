@@ -29,7 +29,7 @@ Nick Apostolakis
 <li><a href="https://www.packer.io/">Packer</a> This is used for the creation of custom Vagrant boxes</li>
 <li><a href="https://downloads.chef.io/chef-dk/">Berkshelf</a> Part of Chef Development toolkit. Used for defining cookbook dependencies</li>
 <li><a href="https://downloads.chef.io/chef-dk/">Chef</a></li>
-<li>Vagrant-berkshelf The vagrant plugin that is used to transfer the cookbooks on the new vm</li>
+<li><a href="https://github.com/berkshelf/vagrant-berkshelf">Vagrant-berkshelf</a> The vagrant plugin that is used to transfer the cookbooks on the new vm</li>
 <li><a href="https://www.vagrantup.com/">Vagrant</a> Vagrant will be used to generate the finished product</li>
 </ul>
 </div>
@@ -99,7 +99,7 @@ cookbook &#39;cookbook_name&#39;, &quot;~&gt; 2.6&quot;</code></pre>
 <p>Core chef concepts:</p>
 <ul>
 <li>Cookbook attributes</li>
-<li>The runlist</li>
+<li>The run_list</li>
 </ul>
 <h2 id="cookbook-attributes">Cookbook attributes</h2>
 <p>One important feature of attributes is that they can be over-riden during runtime, both from the calling scripts and the cookbooks themselves. Cookbook attributes are saved inside the attributes directory, by default there is one file there called default.rb. In our example cookbook it contains two attributes:</p>
@@ -109,13 +109,97 @@ default[&#39;packages_default_action&#39;] = &#39;install&#39;</code></pre>
 </div>
 <div class="slide section level1">
 
-<h2 id="a-chef-runlist">A chef runlist</h2>
+<h2 id="a-chef-run_list">A chef run_list</h2>
+<p>A run-list is:</p>
+<ul>
+<li>An ordered list of roles and/or recipes that are run in an exact order; if a recipe appears more than once in the run-list, the chef-client will never run that recipe twice</li>
+<li>Always specific to the node on which it runs, though it is possible for many nodes to have run-lists that are similar or even identical</li>
+<li>Stored as part of the node object on the Chef server</li>
+<li>Maintained using knife and uploaded to the Chef server or via the Chef management console user interface</li>
+</ul>
+<p>In the chef-solo context, a run_list is limited to a specific chef-solo run and isolated on the vm it is running, it does not require any external chef resources (e.g chef server)</p>
+<p>Plainly put, a run_list is the list of the recipes we want to execute from one or more cookbooks. These cookbooks need to be available and accessible on a predefined location.</p>
+<p>It looks like this:</p>
+<pre><code>{ &quot;run_list&quot;: [&quot;recipe[packages::default]&quot;, &quot;recipe[anotherthing]&quot;] }</code></pre>
 </div>
 <div id="vagrant-berkshelf" class="slide section level1">
 <h1>Vagrant-berkshelf</h1>
+<p>Vagrant Berkshelf is a Vagrant plugin that adds Berkshelf integration to the Chef provisioners. Vagrant Berkshelf will automatically download and install cookbooks onto the Vagrant Virtual Machine.</p>
+<p>If the Vagrant Berkshelf plugin is installed, it will intelligently detect when a Berksfile is present in the same working directory as the Vagrantfile.</p>
+<p>Vagrant-berkshelf is installed using the following command:</p>
+<pre><code>vagrant plugin install vagrant-berkshelf</code></pre>
 </div>
 <div id="vagrant" class="slide section level1">
 <h1>Vagrant</h1>
+<p>Vagrant is a tool for building complete development environments. With an easy-to-use workflow and focus on automation.</p>
+<p>It uses pre packaged templates called boxes as a starting point and is using an open extendable interface in order to provide more features in the form of plugins. Vagrant-berkshelf is one of those plugins, and that makes work with chef a lot easier.</p>
+<p>There are a lot of freely available community vagrant boxes for any platform imaginable. In NCR Edinburgh we build our own from the official CentOS sources.</p>
+<p>Vagrant supports out of the box a number of provisioners, among themselves chef and salt. In the following example we are going to use the chef provisioner.</p>
+<p>It also supports a number of virtualisation providers, with VirtualBox as a default and VMWare as the suggested platform for production environments. All these providers are distributed as vagrant plugins</p>
+<p>Vagrant is controlled by a single file called Vagrantfile</p>
+<ul>
+<li>Example Vagrantfiles can be found <a href="https://github.com/patrickdlee/vagrant-examples">here</a></li>
+</ul>
+</div>
+<div class="slide section level1">
+
+<h2 id="the-most-important-vagrant-commands">The most important vagrant commands</h2>
+<ul>
+<li><em>vagrant plugin install plugin-name</em> (installs vagrant plugins)</li>
+<li><em>vagrant up</em> (imports the base box in the local vagrant repo and starts the new vm)</li>
+<li><em>vagrant provision</em> (runs the provisioner blocks)</li>
+<li><em>vagrant ssh</em> (logs into the new vm)</li>
+<li><em>vagrant reload</em> (restarts vagrant machine, loads new Vagrantfile configuration)</li>
+<li><em>vagrant halt</em> (stops the vagrant machine)</li>
+<li><em>vagrant destroy</em> (stops and deletes all the files of the vagrant machine)</li>
+</ul>
+<p>All the vagrant vms appear as VirtualBox vms, so you can use VirtualBox interface to export a vm to and ova</p>
+</div>
+<div class="slide section level1">
+
+<h2 id="vagrantfile">Vagrantfile</h2>
+<p>A Vagrant file looks like this:</p>
+<pre><code># -*- mode: ruby -*-&quot;
+# vi: set ft=ruby :
+
+box_type  = &quot;chef/centos-6.6&quot;
+
+Vagrant.configure(&quot;2&quot;) do |config|
+  config.vm.box = &quot;#{box_type}&quot;
+  config.berkshelf.enabled = true
+
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # Add user list
+  # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  config.vm.provision &quot;chef_solo&quot; do |chef|
+    chef.json = {
+      &quot;packages&quot; =&gt; [&#39;git&#39;,&#39;openssl&#39; ]
+    }
+    chef.add_recipe &quot;packages::default&quot;
+  end
+
+end</code></pre>
+</div>
+<div id="the-packages-cookbook-recipe" class="slide section level1">
+<h1>The packages cookbook recipe</h1>
+<p>The cookbook recipe we are executing with this vagrant file goes through the following operations:</p>
+<pre><code>Chef::Log.info &quot;packages:#{node[&#39;packages&#39;].inspect}&quot;
+
+if node[&#39;packages&#39;].is_a?(Array)
+  node[&#39;packages&#39;].each do |pkg|
+    package pkg do
+      action node[&#39;packages_default_action&#39;].to_sym
+    end
+  end
+elsif node[&#39;packages&#39;].is_a?(Hash)
+  node[&#39;packages&#39;].each do |pkg, act|
+    package pkg.to_s do
+      action act.to_sym
+    end
+  end
+else
+  Chef::Log.warn(&#39;`node[&quot;packages&quot;]` must be an Array or Hash.&#39;)
+end</code></pre>
 </div>
 <div id="questions" class="slide section level1">
 <h1>Questions?</h1>

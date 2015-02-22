@@ -8,11 +8,11 @@ Vagrant.configure("2") do |config|
   config.berkshelf.enabled = true
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Add user list
+  # Add packages
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   config.vm.provision "chef_solo" do |chef|
   chef.json = {
-      "packages" => ['git','openssl' ]
+      "packages" => ['git','screen','openssl' ]
     }
     chef.add_recipe "packages::default"
   end
