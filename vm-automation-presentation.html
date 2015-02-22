@@ -26,18 +26,19 @@ Nick Apostolakis
 <h1>A walkthrough of the technologies used in NCR Edinburgh</h1>
 <p>The goal is to create a fully configured vm artifact ready to be imported in the virtualization software of choice. We will use VirtualBox for the development system</p>
 <ul>
-<li><a href="https://www.packer.io/">Packer</a> This is used for the creation of custom Vagrant boxes</li>
-<li><a href="https://downloads.chef.io/chef-dk/">Berkshelf</a> Part of Chef Development toolkit. Used for defining cookbook dependencies</li>
-<li><a href="https://downloads.chef.io/chef-dk/">Chef</a></li>
-<li><a href="https://github.com/berkshelf/vagrant-berkshelf">Vagrant-berkshelf</a> The vagrant plugin that is used to transfer the cookbooks on the new vm</li>
-<li><a href="https://www.vagrantup.com/">Vagrant</a> Vagrant will be used to generate the finished product</li>
+<li><em><a href="https://www.packer.io/">Packer</a></em> used for the creation of custom Vagrant boxes</li>
+<li><em><a href="https://downloads.chef.io/chef-dk/">Berkshelf</a></em> part of Chef Development toolkit. Used for cookbook dependency management</li>
+<li><em><a href="https://downloads.chef.io/chef-dk/">Chef-solo</a></em></li>
+<li><em><a href="https://github.com/berkshelf/vagrant-berkshelf">Vagrant-berkshelf</a></em> used to transfer the cookbooks on the new vm</li>
+<li><em><a href="https://www.vagrantup.com/">Vagrant</a></em> combines all the aforementioned technologies to create and provision the new vm</li>
 </ul>
 </div>
 <div id="packer" class="slide section level1">
 <h1>Packer</h1>
-<p>Packer is an open source tool for creating identical machine images for multiple platforms from a single source configuration. Packer is lightweight, runs on every major operating system, and is highly performant, creating machine images for multiple platforms in parallel. Packer does not replace configuration management like Chef or Puppet. In fact, when building images, Packer is able to use tools like Chef or Puppet to install software onto the image.</p>
+<p>Packer is an open source tool for creating identical machine images for multiple platforms from a single source configuration.</p>
+<p>Packer does not replace configuration management like Chef or Puppet. In fact, when building images, Packer is able to use tools like Chef or Puppet to install software onto the image.</p>
 <p>A machine image is a single static unit that contains a pre-configured operating system and installed software which is used to quickly create new running machines. Machine image formats change for each platform. Some examples include AMIs for EC2, VMDK/VMX files for VMware, OVF exports for VirtualBox, etc.</p>
-<p>Although nowadays Packer supports Chef itself, we are basically using its Vagrant post-processor to create custom Vagrant boxes from the net installation iso of Centos 6.6. Originally Packer did not support these provisioners, so we used Vagrant instead. Nowadays its feature list is quite close to the Vagrant</p>
+<p>Although nowadays Packer supports Chef itself, we are basically using its Vagrant post-processor to create custom Vagrant boxes from the net installation iso of Centos 6.6. Originally Packer did not support configuration management systems, so we used Vagrant instead. Nowadays its feature list is quite close to the Vagrant</p>
 </div>
 <div id="packer-template-file-example" class="slide section level1">
 <h1>Packer template file example</h1>
@@ -47,34 +48,34 @@ Nick Apostolakis
 </ul>
 <p>Packer templates are often brittle and not so easy to read as Vagrant files. The following example retrieves the ubuntu server iso and prepares a system using shell as a provisioner and executing the script setup_things.sh</p>
 <pre><code>{
-&quot;builders&quot;: [
-{
-  &quot;type&quot;: &quot;virtualbox-iso&quot;,
-  &quot;guest_os_type&quot;: &quot;Ubuntu_64&quot;,
-  &quot;iso_url&quot;: &quot;http://releases.ubuntu.com/12.04/ubuntu-12.04.5-server-amd64.iso&quot;,
-  &quot;iso_checksum&quot;: &quot;769474248a3897f4865817446f9a4a53&quot;,
-  &quot;iso_checksum_type&quot;: &quot;md5&quot;,
-  &quot;ssh_username&quot;: &quot;packer&quot;,
-  &quot;ssh_password&quot;: &quot;packer&quot;,
-  &quot;ssh_wait_timeout&quot;: &quot;30s&quot;,
-  &quot;shutdown_command&quot;: &quot;echo &#39;packer&#39; | sudo -S shutdown -P now&quot;
-}
-],
+  &quot;builders&quot;: [
+  {
+    &quot;type&quot;: &quot;virtualbox-iso&quot;,
+    &quot;guest_os_type&quot;: &quot;Ubuntu_64&quot;,
+    &quot;iso_url&quot;: &quot;http://releases.ubuntu.com/12.04/ubuntu-12.04.5-server-amd64.iso&quot;,
+    &quot;iso_checksum&quot;: &quot;769474248a3897f4865817446f9a4a53&quot;,
+    &quot;iso_checksum_type&quot;: &quot;md5&quot;,
+    &quot;ssh_username&quot;: &quot;packer&quot;,
+    &quot;ssh_password&quot;: &quot;packer&quot;,
+    &quot;ssh_wait_timeout&quot;: &quot;30s&quot;,
+    &quot;shutdown_command&quot;: &quot;echo &#39;packer&#39; | sudo -S shutdown -P now&quot;
+  }
+  ],
 
-&quot;provisioners&quot;: [
-{
-  &quot;type&quot;: &quot;shell&quot;,
-  &quot;script&quot;: &quot;setup_things.sh&quot;
-}
-]
+  &quot;provisioners&quot;: [
+  {
+    &quot;type&quot;: &quot;shell&quot;,
+    &quot;script&quot;: &quot;setup_things.sh&quot;
+  }
+  ]
 }</code></pre>
 </div>
 <div id="berkshelf" class="slide section level1">
 <h1>Berkshelf</h1>
 <ul>
-<li>The Berkshelf is a tool that can be used to manage and define cookbooks dependencies.</li>
-<li>Berkshelf is used by our vm creation tool Vagrant to download and install all the cookbooks that we need on the new vm</li>
-<li>Nowadays it is part of Chef Development Kit (ChefDK)</li>
+<li>is a tool that can be used to manage and define cookbooks dependencies.</li>
+<li>is used by our vm creation tool Vagrant to download and install all the cookbooks that we need on the new vm</li>
+<li>it is part of Chef Development Kit (ChefDK)</li>
 <li>The main configuration file of Berkshelf is a file called Berksfile</li>
 </ul>
 <h2 id="berkshelf-commands">Berkshelf commands</h2>
@@ -146,7 +147,7 @@ default[&#39;packages_default_action&#39;] = &#39;install&#39;</code></pre>
 <h2 id="the-most-important-vagrant-commands">The most important vagrant commands</h2>
 <ul>
 <li><em>vagrant plugin install plugin-name</em> (installs vagrant plugins)</li>
-<li><em>vagrant up</em> (imports the base box in the local vagrant repo and starts the new vm)</li>
+<li><em>vagrant up</em> (imports the base box in the local vagrant repo, starts and provisions the new vm)</li>
 <li><em>vagrant provision</em> (runs the provisioner blocks)</li>
 <li><em>vagrant ssh</em> (logs into the new vm)</li>
 <li><em>vagrant reload</em> (restarts vagrant machine, loads new Vagrantfile configuration)</li>
@@ -169,11 +170,11 @@ Vagrant.configure(&quot;2&quot;) do |config|
   config.berkshelf.enabled = true
 
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # Add user list
+  # Add packages
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   config.vm.provision &quot;chef_solo&quot; do |chef|
     chef.json = {
-      &quot;packages&quot; =&gt; [&#39;git&#39;,&#39;openssl&#39; ]
+      &quot;packages&quot; =&gt; [&#39;git&#39;, &#39;screen&#39;, &#39;vim&#39;,&#39;openssl&#39; ]
     }
     chef.add_recipe &quot;packages::default&quot;
   end
