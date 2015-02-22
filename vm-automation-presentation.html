@@ -27,170 +27,95 @@ Nick Apostolakis
 <p>The goal is to create a fully configured vm artifact ready to be imported in the virtualization software of choice. We will use VirtualBox for the development system</p>
 <ul>
 <li><a href="https://www.packer.io/">Packer</a> This is used for the creation of custom Vagrant boxes</li>
-<li><a href="https://www.vagrantup.com/">Vagrant</a> Vagrant will be used to generate the finished product</li>
 <li><a href="https://downloads.chef.io/chef-dk/">Berkshelf</a> Part of Chef Development toolkit. Used for defining cookbook dependencies</li>
-<li>Vagrant-berkshelf The vagrant backend that is used to transfer the cookbooks on the new vm</li>
+<li><a href="https://downloads.chef.io/chef-dk/">Chef</a></li>
+<li>Vagrant-berkshelf The vagrant plugin that is used to transfer the cookbooks on the new vm</li>
+<li><a href="https://www.vagrantup.com/">Vagrant</a> Vagrant will be used to generate the finished product</li>
 </ul>
 </div>
-<div id="enter-configuration-and-vm-managment-systems" class="slide section level1">
-<h1>Enter configuration and vm managment systems</h1>
-<h2 id="with-the-configuration-management-systems-we-can">With the configuration management systems we can:</h2>
-<ul>
-<li>Define in a declarative way, the desired state of the a system or service.</li>
-<li>Distribute these informations in a consistent and safe way.</li>
-<li>Achieve idepondence</li>
-<li>Propagate changes in a consistent and safe way</li>
-<li>service state consistency. (e.g automatic restart of failed services)</li>
-</ul>
-<h2 id="with-the-vm-management-and-orchestration-tools-we-can">With the vm management and orchestration tools we can:</h2>
-<ul>
-<li>define dependencies between vms</li>
-<li>define types of vms</li>
-<li>create and destroy whole environments of these vms</li>
-<li>manage vms as groups or individualy</li>
-<li>use various policies for rolling out vm upgrades</li>
-<li>horizontal auto scaling of whole environments</li>
-<li>automatic restart of failed vms</li>
-</ul>
+<div id="packer" class="slide section level1">
+<h1>Packer</h1>
+<p>Packer is an open source tool for creating identical machine images for multiple platforms from a single source configuration. Packer is lightweight, runs on every major operating system, and is highly performant, creating machine images for multiple platforms in parallel. Packer does not replace configuration management like Chef or Puppet. In fact, when building images, Packer is able to use tools like Chef or Puppet to install software onto the image.</p>
+<p>A machine image is a single static unit that contains a pre-configured operating system and installed software which is used to quickly create new running machines. Machine image formats change for each platform. Some examples include AMIs for EC2, VMDK/VMX files for VMware, OVF exports for VirtualBox, etc.</p>
+<p>Although nowadays Packer supports Chef itself, we are basically using its Vagrant post-processor to create custom Vagrant boxes from the net installation iso of Centos 6.6. Originally Packer did not support these provisioners, so we used Vagrant instead. Nowadays its feature list is quite close to the Vagrant</p>
 </div>
-<div id="most-prominent-tools" class="slide section level1">
-<h1>Most prominent tools</h1>
-<h2 id="configuration-management-systems">Configuration management systems</h2>
+<div id="packer-template-file-example" class="slide section level1">
+<h1>Packer template file example</h1>
 <ul>
-<li><a href="http://cfengine.com/">cfengine</a></li>
-<li><a href="http://puppetlabs.com/">Puppet</a></li>
-<li><a href="https://www.chef.io/">Chef</a></li>
-<li><a href="http://saltstack.com/">Salt</a></li>
-<li><a href="http://www.ansible.com/home">Ansible</a></li>
+<li>Templates are JSON files that configure the various components of Packer in order to create one or more machine images.</li>
+<li>Templates are given to commands such as packer build, which will take the template and actually run the builds within it, producing any resulting machine images.</li>
 </ul>
-<h2 id="vm-management-orchestration-systems">Vm management &amp; orchestration systems</h2>
-<ul>
-<li><a href="https://code.google.com/p/ganeti/">Ganeti</a></li>
-<li><a href="https://www.openstack.org/">Openstack</a></li>
-<li><a href="http://aws.amazon.com/cloudformation/">AWS CloudFormation</a></li>
-<li><a href="https://github.com/googlecloudplatform/kubernetes">Kubernetes</a></li>
-<li><a href="https://brooklyn.incubator.apache.org/">Apache Brooklyn</a></li>
-</ul>
+<p>Packer templates are often brittle and not so easy to read as Vagrant files. The following example retrieves the ubuntu server iso and prepares a system using shell as a provisioner and executing the script setup_things.sh</p>
+<pre><code>{
+&quot;builders&quot;: [
+{
+  &quot;type&quot;: &quot;virtualbox-iso&quot;,
+  &quot;guest_os_type&quot;: &quot;Ubuntu_64&quot;,
+  &quot;iso_url&quot;: &quot;http://releases.ubuntu.com/12.04/ubuntu-12.04.5-server-amd64.iso&quot;,
+  &quot;iso_checksum&quot;: &quot;769474248a3897f4865817446f9a4a53&quot;,
+  &quot;iso_checksum_type&quot;: &quot;md5&quot;,
+  &quot;ssh_username&quot;: &quot;packer&quot;,
+  &quot;ssh_password&quot;: &quot;packer&quot;,
+  &quot;ssh_wait_timeout&quot;: &quot;30s&quot;,
+  &quot;shutdown_command&quot;: &quot;echo &#39;packer&#39; | sudo -S shutdown -P now&quot;
+}
+],
+
+&quot;provisioners&quot;: [
+{
+  &quot;type&quot;: &quot;shell&quot;,
+  &quot;script&quot;: &quot;setup_things.sh&quot;
+}
+]
+}</code></pre>
 </div>
-<div id="our-focus-today-will-be-on-the-configuration-management-systems." class="slide section level1">
-<h1>Our focus today will be on the configuration management systems.</h1>
-<h2 id="all-those-systems-share-some-common-concepts.">All those systems share some common concepts.</h2>
+<div id="berkshelf" class="slide section level1">
+<h1>Berkshelf</h1>
 <ul>
-<li>They have a data harvesting service (factor, ohai). This tool retrieves varioys attributes from the system:
-<ul>
-<li>Platform</li>
-<li>Operating system</li>
-<li>Hostname</li>
-<li>Ip</li>
-<li>etc</li>
-</ul></li>
-<li>They are defining resources in a declarative way, that can be used to manipulate the system. A resource can be:
-<ul>
-<li>a user</li>
-<li>a directory</li>
-<li>a service</li>
-<li>a package</li>
-<li>etc</li>
-</ul></li>
-<li>Multiple mode of execution (not supported by all tools)
-<ul>
-<li>Standalone mode</li>
-<li>Server/client mode</li>
-</ul></li>
+<li>The Berkshelf is a tool that can be used to manage and define cookbooks dependencies.</li>
+<li>Berkshelf is used by our vm creation tool Vagrant to download and install all the cookbooks that we need on the new vm</li>
+<li>Nowadays it is part of Chef Development Kit (ChefDK)</li>
+<li>The main configuration file of Berkshelf is a file called Berksfile</li>
 </ul>
+<h2 id="berkshelf-commands">Berkshelf commands</h2>
+<pre><code>berks </code></pre>
+<p>will download the cookbooks and</p>
+<pre><code>berks vendor</code></pre>
+<p>will upload them to the new vm. You dont need to do this manually, there is a Vagrant plugin that takes care of everything</p>
 </div>
-<div id="in-ncr-edinburgh-we-are-using-opscode-chef" class="slide section level1">
-<h1>In NCR Edinburgh we are using Opscode Chef</h1>
-<p>All the above, are supported by Chef. Chef gets its terminology from cooking.</p>
-<p>Chef is using the resource definition, as described in the previous slide.</p>
-<ul>
-<li>A collection of chef resources is called a recipe.</li>
-<li>A collection of recipes is called a cookbook.</li>
-<li>the tool that is used for cookbook scaffolding and management is called knife</li>
-<li>the integration test suite for cookbooks is called test-kitchen</li>
-</ul>
+<div class="slide section level1">
+
+<h2 id="berksfile">Berksfile</h2>
+<p>There is a community cookbook repository and Berkshelf can acces them by using the following syntax:</p>
+<pre><code>source &quot;https://supermarket.chef.io&quot;
+cookbook &#39;cookbook_name&#39;, &quot;~&gt; 2.6&quot;</code></pre>
+<p>Chef supermarket is the directory of the community cookbooks.</p>
+<p>Berkhelf can also use cookbooks from alternative locations (e.g git repos, github, gitlab etc) with a small change in the Berksfile syntax:</p>
+<pre><code>cookbook &#39;packages&#39;, git: &#39;git@github.com:mattray/packages-cookbook.git&#39;</code></pre>
 </div>
-<div id="a-peek-inside-chef" class="slide section level1">
-<h1>A peek inside Chef</h1>
-<p>Chef uses a Ruby DSL for its recipe definition. A simple resource call example:</p>
-<pre><code>directory &quot;/var/lib/foo&quot; do
-  owner &#39;root&#39;
-  group &#39;root&#39;
-  mode &#39;0644&#39;
-  action :create
-end</code></pre>
+<div id="chef" class="slide section level1">
+<h1>Chef</h1>
+<p>For the purposes of this presentation we are going to use a very simple cookbook, that takes a list of packages and installs it on the new vm. It is developed by a Chef employee Matt Ray and is distributed unde the Apache License. It does not matter which distribution we choose to use, it will work in all of them, Chef takes care of the differences in package managers.</p>
+<p>Core chef concepts:</p>
+<ul>
+<li>Cookbook attributes</li>
+<li>The runlist</li>
+</ul>
+<h2 id="cookbook-attributes">Cookbook attributes</h2>
+<p>One important feature of attributes is that they can be over-riden during runtime, both from the calling scripts and the cookbooks themselves. Cookbook attributes are saved inside the attributes directory, by default there is one file there called default.rb. In our example cookbook it contains two attributes:</p>
+<pre><code>default[&#39;packages&#39;] = []
+default[&#39;packages_default_action&#39;] = &#39;install&#39;</code></pre>
+<p>These are the default values defined in the cookbook. An empty array list of packages and the default action of the cookbook.</p>
 </div>
-<div id="a-cookbook-structure" class="slide section level1">
-<h1>A cookbook structure</h1>
-<p>A cookbook is not made only to contain recipes. It is a complex package that can contain:</p>
-<ul>
-<li>files that will be copied on the new vm</li>
-<li>templates</li>
-<li>attributes</li>
-<li>tests</li>
-<li>new resources</li>
-<li>providers</li>
-<li>dependencies between cookbooks</li>
-<li>data bags</li>
-</ul>
-<blockquote>
-<p>A data bag is a global variable that is stored as JSON data and is accessible from a Chef server. A data bag is indexed for searching and can be loaded by a recipe or accessed during a search. A data bag item may be encrypted using shared secret encryption. This allows each data bag item to store confidential information (such as a database password) or to be managed in a source control system (without plain-text data appearing in revision history). Each data bag item may be encrypted individually; if a data bag contains multiple encrypted data bag items, these data bag items are not required to share the same encryption keys.</p>
-</blockquote>
+<div class="slide section level1">
+
+<h2 id="a-chef-runlist">A chef runlist</h2>
 </div>
-<div id="chef-supports-three-execution-modes" class="slide section level1">
-<h1>Chef supports three execution modes</h1>
-<ul>
-<li>Client/server</li>
-<li>Chef solo</li>
-<li>Chef zero</li>
-</ul>
+<div id="vagrant-berkshelf" class="slide section level1">
+<h1>Vagrant-berkshelf</h1>
 </div>
-<div id="chef-solo" class="slide section level1">
-<h1>Chef solo</h1>
-<ul>
-<li>Chef solo is an isolated run of chef converge.</li>
-<li>It can use recipes, attributes, templates and data bags but can not use the advanced chef features like search etc.</li>
-</ul>
-<blockquote>
-<p>Chef solo is used when we want to converge an isolated vm, without having to connect to an external chef server. It is the approach used by all of our vms, although the implementation differs slightly between the ticketing and the connections vms. The connections vms (connections &amp; mcw) are using databags for the tomcat instances, so they can be extended without modifying the cookbook. As described in the previous section a databag is an external data source for a cookbook.</p>
-</blockquote>
-</div>
-<div id="chef-zero" class="slide section level1">
-<h1>Chef zero</h1>
-<ul>
-<li>Chef zero is also called a poor mans chef server</li>
-<li>It is an in memory chef server</li>
-<li>It is a recent addition (after Chef v11.0)</li>
-<li>It supports all the Chef solo functionality</li>
-<li>Plus a few more advanced features, like data bag searches</li>
-</ul>
-</div>
-<div id="chef-server" class="slide section level1">
-<h1>Chef server</h1>
-<ul>
-<li>It is a client server architecture</li>
-<li>Chef-client is an agent installed on the vm that runs regularly and converges the vm against the specified role</li>
-<li>Chef server is a repository of almost all the chef related artifacts (cookbooks, roles, databags)</li>
-<li>Chef cookbooks can be versioned, chef roles can not.</li>
-<li>It offers a web interface through which the chef managed nodes</li>
-<li>There is also a REST API that can be used to search and retrieve information about the chef artifacts</li>
-</ul>
-<p>Chef server is used in our Jenkins cluster. Our Jenkins slaves have a quite complex setup, since we need to support consistently a lot of different technologies.</p>
-</div>
-<div id="which-execution-mode-is-the-best" class="slide section level1">
-<h1>Which execution mode is the best?</h1>
-<ul>
-<li>It depends on the environment and the architecture.</li>
-</ul>
-<blockquote>
-<p>Chef solo/zero are suitable for isolated environments, where we have not full access on the network infrastructure, or where we can not change the architecture of the environment at will. Although it does not provide the full functionality this execution mode is quite powerful. Chef server, has complex setup so it is quite possible that the cost of setting up a chef server is more than the benefit of using it.</p>
-</blockquote>
-<ul>
-<li>It makes sense to set up a chef server, when we have a complex architecture and the power to shape the infrastructure at will.</li>
-</ul>
-<blockquote>
-<p>This will allow us to manage a lot of different environments, and scale it horizontally with thousand of vms, with minimal effort. If the architecture is even more complex, we can set up chef servers that manage chef servers. Chef can be customized a great deal, by using custom event handlers and various parts of it, including ohai can be extended with new custom plugins.</p>
-</blockquote>
+<div id="vagrant" class="slide section level1">
+<h1>Vagrant</h1>
 </div>
 <div id="questions" class="slide section level1">
 <h1>Questions?</h1>

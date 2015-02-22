@@ -7,151 +7,105 @@
 The goal is to create a fully configured vm artifact ready to be imported in the virtualization software of choice. We will use VirtualBox for the development system
 
   * [Packer](https://www.packer.io/) This is used for the creation of custom Vagrant boxes
-  * [Vagrant](https://www.vagrantup.com/) Vagrant will be used to generate the finished product
   * [Berkshelf](https://downloads.chef.io/chef-dk/) Part of Chef Development toolkit. Used for defining cookbook dependencies
-  * Vagrant-berkshelf The vagrant backend that is used to transfer the cookbooks on the new vm
+  * [Chef](https://downloads.chef.io/chef-dk/)
+  * Vagrant-berkshelf The vagrant plugin that is used to transfer the cookbooks on the new vm
+  * [Vagrant](https://www.vagrantup.com/) Vagrant will be used to generate the finished product
 
-# Enter configuration and vm managment systems
+# Packer
 
-## With the configuration management systems we can:
+Packer is an open source tool for creating identical machine images for multiple platforms from a single source configuration. Packer is lightweight, runs on every major operating system, and is highly performant, creating machine images for multiple platforms in parallel. Packer does not replace configuration management like Chef or Puppet. In fact, when building images, Packer is able to use tools like Chef or Puppet to install software onto the image.
 
-  * Define in a declarative way, the desired state of the a system or service. 
-  * Distribute these informations in a consistent and safe way.
-  * Achieve idepondence
-  * Propagate changes in a consistent and safe way
-  * service state consistency. (e.g automatic restart of failed services)
+A machine image is a single static unit that contains a pre-configured operating system and installed software which is used to quickly create new running machines. Machine image formats change for each platform. Some examples include AMIs for EC2, VMDK/VMX files for VMware, OVF exports for VirtualBox, etc.
 
+Although nowadays Packer supports Chef itself, we are basically using its Vagrant post-processor to create custom Vagrant boxes from the net installation iso of Centos 6.6. Originally Packer did not support these provisioners, so we used Vagrant instead. Nowadays its feature list is quite close to the Vagrant
 
-## With the vm management and orchestration tools we can:
+# Packer template file example
 
-  * define dependencies between vms
-  * define types of vms
-  * create and destroy whole environments of these vms
-  * manage vms as groups or individualy
-  * use various policies for rolling out vm upgrades
-  * horizontal auto scaling of whole environments
-  * automatic restart of failed vms
+  * Templates are JSON files that configure the various components of Packer in order to create one or more machine images. 
+  * Templates are given to commands such as packer build, which will take the template and actually run the builds within it, producing any resulting machine images.
 
+Packer templates are often brittle and not so easy to read as Vagrant files. The following example retrieves the ubuntu server iso and prepares a system using shell as a provisioner and executing the script setup_things.sh
 
-# Most prominent tools
+    {
+    "builders": [
+    {
+      "type": "virtualbox-iso",
+      "guest_os_type": "Ubuntu_64",
+      "iso_url": "http://releases.ubuntu.com/12.04/ubuntu-12.04.5-server-amd64.iso",
+      "iso_checksum": "769474248a3897f4865817446f9a4a53",
+      "iso_checksum_type": "md5",
+      "ssh_username": "packer",
+      "ssh_password": "packer",
+      "ssh_wait_timeout": "30s",
+      "shutdown_command": "echo 'packer' | sudo -S shutdown -P now"
+    }
+    ],
 
-## Configuration management systems
+    "provisioners": [
+    {
+      "type": "shell",
+      "script": "setup_things.sh"
+    }
+    ]
+    }
 
-  * [cfengine](http://cfengine.com/)
-  * [Puppet](http://puppetlabs.com/)
-  * [Chef](https://www.chef.io/)
-  * [Salt](http://saltstack.com/)
-  * [Ansible](http://www.ansible.com/home)
+# Berkshelf
+  * The Berkshelf is a tool that can be used to manage and define cookbooks dependencies.
+  * Berkshelf is used by our vm creation tool Vagrant to download and install all the cookbooks that we need on the new vm
+  * Nowadays it is part of Chef Development Kit (ChefDK)
+  * The main configuration file of Berkshelf is a file called Berksfile
 
-## Vm management & orchestration systems
+## Berkshelf commands
 
-  * [Ganeti](https://code.google.com/p/ganeti/)
-  * [Openstack](https://www.openstack.org/)
-  * [AWS CloudFormation](http://aws.amazon.com/cloudformation/)
-  * [Kubernetes](https://github.com/googlecloudplatform/kubernetes)
-  * [Apache Brooklyn](https://brooklyn.incubator.apache.org/)
+    berks 
 
-# Our focus today will be on the configuration management systems.
+will download the cookbooks and 
 
-## All those systems share some common concepts.
+    berks vendor
 
-  * They have a data harvesting service (factor, ohai). This tool retrieves varioys attributes from the system:
-    - Platform
-    - Operating system
-    - Hostname
-    - Ip
-    - etc
-  * They are defining resources in a declarative way, that can be used to manipulate the system. A resource can be:
-    - a user
-    - a directory
-    - a service
-    - a package
-    - etc
-  * Multiple mode of execution (not supported by all tools)
-    - Standalone mode
-    - Server/client mode
+will upload them to the new vm. You dont need to do this manually, there is a Vagrant plugin that takes care of everything
 
-# In NCR Edinburgh we are using Opscode Chef
-All the above, are supported by Chef. Chef gets its terminology from cooking.
+--------------------------------------
 
-Chef is using the resource definition, as described in the previous slide. 
+## Berksfile
 
-* A collection of chef resources is called a recipe. 
-* A collection of recipes is called a cookbook.
-* the tool that is used for cookbook scaffolding and management is called knife
-* the integration test suite for cookbooks is called test-kitchen
+There is a community cookbook repository and Berkshelf can acces them by using the following syntax:
 
-# A peek inside Chef
+    source "https://supermarket.chef.io"
+    cookbook 'cookbook_name', "~> 2.6"
 
-Chef uses a Ruby DSL for its recipe definition.
-A simple resource call example:
+Chef supermarket is the directory of the community cookbooks.
 
-    directory "/var/lib/foo" do
-      owner 'root'
-      group 'root'
-      mode '0644'
-      action :create
-    end
+Berkhelf can also use cookbooks from alternative locations (e.g git repos, github, gitlab etc) with a small change in the Berksfile syntax:
 
-# A cookbook structure
+    cookbook 'packages', git: 'git@github.com:mattray/packages-cookbook.git'
 
-A cookbook is not made only to contain recipes. It is a complex package that can contain:
+# Chef
 
-* files that will be copied on the new vm
-* templates
-* attributes
-* tests
-* new resources
-* providers
-* dependencies between cookbooks
-* data bags
+For the purposes of this presentation we are going to use a very simple cookbook, that takes a list of packages and installs it on the new vm. It is developed by a Chef employee Matt Ray and is distributed unde the Apache License. It does not matter which distribution we choose to use, it will work in all of them, Chef takes care of the differences in package managers.
 
->A data bag is a global variable that is stored as JSON data and is accessible from a Chef server. A data bag is indexed for searching and can be loaded by a recipe or accessed during a search.
->A data bag item may be encrypted using shared secret encryption. This allows each data bag item to store confidential information (such as a database password) or to be managed in a source control system (without plain-text data appearing in revision history). Each data bag item may be encrypted individually; if a data bag contains multiple encrypted data bag items, these data bag items are not required to share the same encryption keys.
+Core chef concepts:
+  
+  * Cookbook attributes
+  * The runlist
 
-# Chef supports three execution modes
+## Cookbook attributes
 
-* Client/server
-* Chef solo
-* Chef zero
+One important feature of attributes is that they can be over-riden during runtime, both from the calling scripts and the cookbooks themselves.
+Cookbook attributes are saved inside the attributes directory, by default there is one file there called default.rb. In our example cookbook it contains two attributes:
 
-# Chef solo
+    default['packages'] = []
+    default['packages_default_action'] = 'install'
 
-* Chef solo is an isolated run of chef converge. 
-* It can use recipes, attributes, templates and data bags but can not use the advanced chef features like search etc. 
+These are the default values defined in the cookbook. An empty array list of packages and the default action of the cookbook.
 
->Chef solo is used when we want to converge an isolated vm, without having to connect to an external chef server. 
-It is the approach used by all of our vms, although the implementation differs slightly between the ticketing and the connections vms.
-The connections vms (connections & mcw) are using databags for the tomcat instances, so they can be extended without modifying the cookbook. As described in the previous section a databag is an external data source for a cookbook.
+------------------------------------------------
 
-# Chef zero
+## A chef runlist
 
-* Chef zero is also called a poor mans chef server
-* It is an in memory chef server
-* It is a recent addition (after Chef v11.0)
-* It supports all the Chef solo functionality
-* Plus a few more advanced features, like data bag searches
+# Vagrant-berkshelf
 
-# Chef server
-
-* It is a client server architecture
-* Chef-client is an agent installed on the vm that runs regularly and converges the vm against the specified role
-* Chef server is a repository of almost all the chef related artifacts (cookbooks, roles, databags)
-* Chef cookbooks can be versioned, chef roles can not.
-* It offers a web interface through which the chef managed nodes 
-* There is also a REST API that can be used to search and retrieve information about the chef artifacts
-
-Chef server is used in our Jenkins cluster. Our Jenkins slaves have a quite complex setup, since we need to support consistently a lot of different technologies. 
-
-# Which execution mode is the best?
-
-* It depends on the environment and the architecture. 
-
->Chef solo/zero are suitable for isolated environments, where we have not full access on the network infrastructure, or where we can not change the architecture of the environment at will. Although it does not provide the full functionality this execution mode is quite powerful. Chef server, has complex setup so it is quite possible that the cost of setting up a chef server is more than the benefit of using it.
-
-* It makes sense to set up a chef server, when we have a complex architecture and the power to shape the infrastructure at will. 
-
->This will allow us to manage a lot of different environments, and scale it horizontally with thousand of vms, with minimal effort. If the architecture is even more complex, we can set up chef servers that manage chef servers. Chef can be customized a great deal, by using custom event handlers and various parts of it, including ohai can be extended with new custom plugins. 
-
+# Vagrant
 
 #Questions?
