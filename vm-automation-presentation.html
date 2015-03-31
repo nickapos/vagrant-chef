@@ -46,7 +46,7 @@ Nick Apostolakis
 <li>Templates are JSON files that configure the various components of Packer in order to create one or more machine images.</li>
 <li>Templates are given to commands such as packer build, which will take the template and actually run the builds within it, producing any resulting machine images.</li>
 </ul>
-<p>Packer templates are often brittle and not so easy to read as Vagrant files. The following example retrieves the ubuntu server iso and prepares a system using shell as a provisioner and executing the script setup_things.sh</p>
+<p>Packer templates are often brittle and not so easy to use as Vagrant files. The following example retrieves the ubuntu server iso and prepares a system using shell as a provisioner and executing the script setup_things.sh</p>
 <pre><code>{
   &quot;builders&quot;: [
   {
@@ -87,22 +87,21 @@ Nick Apostolakis
 <div class="slide section level1">
 
 <h2 id="berksfile">Berksfile</h2>
-<p>There is a community cookbook repository and Berkshelf can acces them by using the following syntax:</p>
+<p>There is a community cookbook repository called chef supermarket and Berkshelf can acces them by using the following syntax:</p>
 <pre><code>source &quot;https://supermarket.chef.io&quot;
 cookbook &#39;cookbook_name&#39;, &quot;~&gt; 2.6&quot;</code></pre>
-<p>Chef supermarket is the directory of the community cookbooks.</p>
 <p>Berkhelf can also use cookbooks from alternative locations (e.g git repos, github, gitlab etc) with a small change in the Berksfile syntax:</p>
 <pre><code>cookbook &#39;packages&#39;, git: &#39;git@github.com:mattray/packages-cookbook.git&#39;</code></pre>
 </div>
 <div id="chef" class="slide section level1">
 <h1>Chef</h1>
-<p>For the purposes of this presentation we are going to use a very simple cookbook, that takes a list of packages and installs it on the new vm. It is developed by a Chef employee Matt Ray and is distributed unde the Apache License. It does not matter which distribution we choose to use, it will work in all of them, Chef takes care of the differences in package managers.</p>
-<p>Core chef concepts:</p>
+<p>For the purposes of this presentation we are going to use a very simple cookbook, that takes a list of packages and installs it on the new vm. It is developed by a Chef employee Matt Ray and is distributed unde the Apache License. It does not matter which distribution we choose to use, it will work on all of them, Chef takes care of the differences in package managers.</p>
+<h2 id="core-chef-concepts">Core chef concepts:</h2>
 <ul>
 <li>Cookbook attributes</li>
 <li>The run_list</li>
 </ul>
-<h2 id="cookbook-attributes">Cookbook attributes</h2>
+<h3 id="cookbook-attributes">Cookbook attributes</h3>
 <p>One important feature of attributes is that they can be over-riden during runtime, both from the calling scripts and the cookbooks themselves. Cookbook attributes are saved inside the attributes directory, by default there is one file there called default.rb. In our example cookbook it contains two attributes:</p>
 <pre><code>default[&#39;packages&#39;] = []
 default[&#39;packages_default_action&#39;] = &#39;install&#39;</code></pre>
@@ -110,7 +109,7 @@ default[&#39;packages_default_action&#39;] = &#39;install&#39;</code></pre>
 </div>
 <div class="slide section level1">
 
-<h2 id="a-chef-run_list">A chef run_list</h2>
+<h3 id="a-chef-run_list">A chef run_list</h3>
 <p>A run-list is:</p>
 <ul>
 <li>An ordered list of roles and/or recipes that are run in an exact order; if a recipe appears more than once in the run-list, the chef-client will never run that recipe twice</li>
