@@ -2,9 +2,22 @@
 % Nick Apostolakis
 % 27th of February 2015
 
+# Introduction
+
+As virtual machines are becoming increasingly important by the day both for 
+organizations, we will atempt here to provide a brief introductions of the tools
+used in NCR Edinburgh for the automation and provisioning of our infrastructure.
+
+These tools can be used either in a corporate environment in order to provide 
+infrastructure standarization and automation both for development and production
+systems.
+All of the tools mentioned here are open source projects and can be downloaded at
+no cost.
+
+
 # A walkthrough of the technologies used in NCR Edinburgh
 
-The goal is to create a fully configured vm artifact ready to be imported in the virtualization software of choice. We will use VirtualBox for the development system
+The goal is to create a fully configured vm artifact ready to be imported in the virtualization software of choice. We will use VirtualBox for the development system.Our technology stack is the following:
 
   * _[Packer](https://www.packer.io/)_ used for the creation of custom Vagrant boxes
   * _[Berkshelf](https://downloads.chef.io/chef-dk/)_ part of Chef Development toolkit. Used for cookbook dependency management
@@ -72,7 +85,8 @@ will upload them to the new vm. You dont need to do this manually, there is a Va
 
 ## Berksfile
 
-There is a community cookbook repository called chef supermarket and Berkshelf can acces them by using the following syntax:
+
+The Berksfile defines the behaviour of the berkshelf tool. There is a community cookbook repository called chef supermarket and Berkshelf can acces them by using the following syntax:
 
     source "https://supermarket.chef.io"
     cookbook 'cookbook_name', "~> 2.6"
@@ -84,7 +98,23 @@ Berkhelf can also use cookbooks from alternative locations (e.g git repos, githu
 
 # Chef
 
-For the purposes of this presentation we are going to use a very simple cookbook, that takes a list of packages and installs it on the new vm. It is developed by a Chef employee Matt Ray and is distributed unde the Apache License. It does not matter which distribution we choose to use, it will work on all of them, Chef takes care of the differences in package managers.
+Chef is one of the most prominent configuration managment and vm provisioning 
+opensource systems. It is mainly consisted by a nummber of execution blocks called
+resoources, bundled together in files called recipes. A collection of recipes that can
+be combined to preform a specific task are often combined in larger packages 
+called cookbooks. For more details about the internal structure of chef, please
+refer to the first part of the vm automation.
+
+For the purposes of this presentation we are going to use a very simple
+cookbook, that takes a list of packages and installs it on the new vm.
+It is developed by a Chef employee Matt Ray and is distributed unde the
+Apache License. It does not matter which distribution we choose to use,
+it will work on all of them, Chef takes care of the differences in
+package managers. By using a tool like Chef, we can ignore the underlying 
+differences in package managers, repositories and initialization scripts
+and focus at the job in hand. Chef allow us to describe very comples structures
+in a declarative way.
+
 
 ##Core chef concepts:
   
@@ -124,7 +154,7 @@ It looks like this:
 
 Vagrant Berkshelf is a Vagrant plugin that adds Berkshelf integration to the Chef provisioners. Vagrant Berkshelf will automatically download and install cookbooks onto the Vagrant Virtual Machine. 
 
-If the Vagrant Berkshelf plugin is installed, it will intelligently detect when a Berksfile is present in the same working directory as the Vagrantfile.
+If the Vagrant Berkshelf plugin is installed, it will detect when a Berksfile is present in the same working directory as the Vagrantfile.
 
 Vagrant-berkshelf is installed using the following command:
 
@@ -187,6 +217,24 @@ A Vagrant file looks like this:
 
     end
 
+We can see here, that the Vagrantfile syntax is actually a DSL (Domain Specific
+Language) it allows us to use a relatively simple, human readable, declarative
+syntax to define the various attributes we want our new vm to have.
+
+In this file, we are defining the box type, we are using one of the community 
+vagrant boxes provided by opscode the company that creates chef, we are enabling
+the vagrant berkshelf support since we want to use berkshelf to handle the 
+cookbook management for us and use the chef provisioner in order to call the 
+default recipe of the packages cookbook.
+
+Vagrant will override the default attribute with name packages and provide to 
+chef-solo a list of packages that need either to be installed or removed.
+The default action (also defined by an attribute) is install, so these files will
+be installed. As we can see we do not define anywhere how this is going to be done.
+The chef run is completely declarative. All the complexities related to package
+managers, packages and repos are handled under the hood by chef.
+
+
 # The packages cookbook recipe
 
 The cookbook recipe we are executing with this vagrant file goes through the following operations:
@@ -210,4 +258,48 @@ The cookbook recipe we are executing with this vagrant file goes through the fol
     end
 
 
-#Questions?
+Chef recipes are also a ruby DSL, and even though it is not pure ruby they are 
+a bit more technical than Vagrant directives. Despite that, the recipes are also 
+declarative, and as we can see in this example, we are using the resource package
+in order to define the concept of a package and its installation action and not
+the exact package name and the name of the package manager.
+
+This recipe will check if the provided attribute is a hash or an array, and act
+accordingly. Ruby is a dynamically typed language so there is no way to infer the
+type of the data types at the beginning of the execution.
+
+After the installation of the packages the chef run terminates.
+
+# Vagrant or Packer
+
+A reasonable question is why do we use two tools that are doing a similar job.
+Packer and Vagrant are developed by the same company. Originally Packer did
+not support all the external provisioners it supports today, so its use was mostly
+limited in creating vagrant boxes. Today it supports most of the tools Vagrant
+supports and can be used instead of Vagrant.
+
+However there are a few points that you may want to consider before using Packer
+for everything. Packer uses a configuration file that is written in json, and that
+makes it more difficult to edit manually and more easy to corrupt. Vagrants DSL
+syntax is a lot easier to read and edit. Packer is not as widely used and as 
+extensible as Vagrant. Vagrant has a plugin interface, and that makes it easy to
+ create and distribute all kind of plugins that can add
+support for different virtualization systems, different provisioning systems, 
+cookbook management utilities (berkshelf). If we were using Packer we would have
+to preform all these steps manually or re-invent the wheel and implement our own
+tools to preform the steps automatically.
+
+
+# Conclusion
+
+At this poing we should have a live virtual machine created from scratch by our 
+scripts. We can log in to this vm and use it with the command vagrant login
+or create a new vagrant box out of it that can be uploaded to the public vagrant 
+repository of boxes.
+The vm can also be exported to an ova, if we use the VirtualBox tools and be
+distributed to other systems, or members of our organization.
+
+This vm is completely disposable since it can be recreated at any moment through
+ the use of the scripts either manually or through an automation system like 
+ Jenkins.
+
