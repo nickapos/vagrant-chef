@@ -281,21 +281,22 @@ limited in creating vagrant boxes. Today it supports most of the tools Vagrant
 supports and can be used instead of Vagrant.
 
 However there are a few points that you may want to consider before using Packer
-for everything. Packer uses a configuration file that is written in json, and that
-makes it more difficult to edit manually and more easy to corrupt. Vagrants DSL
-syntax is a lot easier to read and edit. Packer is not as widely used and as 
-extensible as Vagrant. Vagrant has a plugin interface, and that makes it easy to
- create and distribute all kind of plugins that can add
-support for different virtualization systems, different provisioning systems, 
-cookbook management utilities (berkshelf). If we were using Packer we would have
-to preform all these steps manually or re-invent the wheel and implement our own
+for everything. 
+
+* Packer uses a configuration file that is written in json, and that makes it more difficult to edit manually and more easy to corrupt. 
+* Vagrant's DSL syntax is a lot easier to read and edit. 
+* Packer is not as widely used and as extensible as Vagrant. 
+* Vagrant has a plugin interface, and that makes it easy to create and distribute all kind of plugins that can add support for different virtualization systems, different provisioning systems, cookbook management utilities (berkshelf). If we were using Packer we would have to preform all these steps manually or re-invent the wheel and implement our own
 tools to preform the steps automatically.
 
 
 # Conclusion
 
 At this poing we should have a live virtual machine created from scratch by our 
-scripts. We can log in to this vm and use it with the command vagrant login
+scripts. We can log in to this vm and use it with the command 
+
+    vagrant login
+
 or create a new vagrant box out of it that can be uploaded to the public vagrant 
 repository of boxes.
 The vm can also be exported to an ova, if we use the VirtualBox tools and be
