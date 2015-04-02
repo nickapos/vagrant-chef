@@ -1,6 +1,8 @@
-% Automated vm generation
-% Nick Apostolakis
-% 27th of February 2015
+---
+title:Automated vm generation
+author: Nick Apostolakis
+date: 27th of February 2015
+---
 
 # Introduction
 
