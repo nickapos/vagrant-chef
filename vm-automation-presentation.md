@@ -4,28 +4,31 @@ author: Nick Apostolakis
 date: 27th of February 2015
 ---
 
+
 # Introduction
 
 As virtual machines are becoming increasingly important by the day both for 
-organizations, we will atempt here to provide a brief introductions of the tools
+organizations and individuals, we will attempt here to provide a brief introduction of the tools
 used in NCR Edinburgh for the automation and provisioning of our infrastructure.
 
+
 These tools can be used either in a corporate environment in order to provide 
-infrastructure standarization and automation both for development and production
+infrastructure standardization and automation both for development and production
 systems.
 All of the tools mentioned here are open source projects and can be downloaded at
 no cost.
 
+This is the second part of a two part presentation related to infrastructure automation. You may like to take a look at the first part that provides an overview of the tools and benefits of virtualization and automation and can be found [here](http://ncredinburgh.com/blog/posts/infrastructure-as-code)
 
 # A walkthrough of the technologies used in NCR Edinburgh
 
 The goal is to create a fully configured vm artifact ready to be imported in the virtualization software of choice. We will use VirtualBox for the development system.Our technology stack is the following:
 
-  * _[Packer](https://www.packer.io/)_ used for the creation of custom Vagrant boxes
-  * _[Berkshelf](https://downloads.chef.io/chef-dk/)_ part of Chef Development toolkit. Used for cookbook dependency management
-  * _[Chef-solo](https://downloads.chef.io/chef-dk/)_
-  * _[Vagrant-berkshelf](https://github.com/berkshelf/vagrant-berkshelf)_ used to transfer the cookbooks on the new vm
-  * _[Vagrant](https://www.vagrantup.com/)_ combines all the aforementioned technologies to create and provision the new vm
+  * _[Packer](https://www.packer.io/)_ ( used for the creation of custom Vagrant boxes )
+  * _[Berkshelf](https://downloads.chef.io/chef-dk/)_ ( part of Chef Development toolkit. Used for cookbook dependency management )
+  * _[Chef-solo](https://downloads.chef.io/chef-dk/)_ ( the standalone execution mode of chef )
+  * _[Vagrant-berkshelf](https://github.com/berkshelf/vagrant-berkshelf)_ ( used to transfer the cookbooks on the new vm )
+  * _[Vagrant](https://www.vagrantup.com/)_ ( combines all the aforementioned technologies to create and provision the new vm )
 
 # Packer
 
@@ -35,14 +38,21 @@ Packer does not replace configuration management like Chef or Puppet. In fact, w
 
 A machine image is a single static unit that contains a pre-configured operating system and installed software which is used to quickly create new running machines. Machine image formats change for each platform. Some examples include AMIs for EC2, VMDK/VMX files for VMware, OVF exports for VirtualBox, etc.
 
+In order to setup and configure a new system, Packer uses a number of files, called kickstarter files, that guide the whole setup procedure step by step, by providing input to all the various menus that come through the usual installation of a system (both windows and or linux).
+
 Although nowadays Packer supports Chef itself, we are basically using its Vagrant post-processor to create custom Vagrant boxes from the net installation iso of Centos 6.6. Originally Packer did not support configuration management systems, so we used Vagrant instead. Nowadays its feature list is quite close to the Vagrant
+
 
 # Packer template file example
 
   * Templates are JSON files that configure the various components of Packer in order to create one or more machine images. 
   * Templates are given to commands such as packer build, which will take the template and actually run the builds within it, producing any resulting machine images.
 
-Packer templates are often brittle and not so easy to use as Vagrant files. The following example retrieves the ubuntu server iso and prepares a system using shell as a provisioner and executing the script setup_things.sh
+
+The following example retrieves the ubuntu server iso and prepares a system using shell as a provisioner and executing the script setup_things.sh
+
+
+    ``` json
 
     {
       "builders": [
@@ -66,6 +76,9 @@ Packer templates are often brittle and not so easy to use as Vagrant files. The 
       }
       ]
     }
+    ```
+
+KHC: I think it might be possible on the website to specify what code the code block is so it is possible to get json highlighting. There might be instructions on confluence but if not ask Alex as he did one recently.
 
 # Berkshelf
   * is a tool that can be used to manage and define cookbooks dependencies.
@@ -83,12 +96,11 @@ will download the cookbooks and
 
 will upload them to the new vm. You dont need to do this manually, there is a Vagrant plugin that takes care of everything
 
---------------------------------------
 
 ## Berksfile
 
 
-The Berksfile defines the behaviour of the berkshelf tool. There is a community cookbook repository called chef supermarket and Berkshelf can acces them by using the following syntax:
+The Berksfile defines the behaviour of the berkshelf tool. There is a community cookbook repository called chef supermarket and Berkshelf can access them by using the following syntax:
 
     source "https://supermarket.chef.io"
     cookbook 'cookbook_name', "~> 2.6"
@@ -100,32 +112,30 @@ Berkhelf can also use cookbooks from alternative locations (e.g git repos, githu
 
 # Chef
 
-Chef is one of the most prominent configuration managment and vm provisioning 
-opensource systems. It is mainly consisted by a nummber of execution blocks called
-resoources, bundled together in files called recipes. A collection of recipes that can
-be combined to preform a specific task are often combined in larger packages 
+Chef is one of the most prominent configuration management and vm provisioning 
+opensource systems. It is mainly consisted by a number of execution blocks called
+resources, bundled together in files called recipes. A collection of recipes that can
+be combined to perform a specific task are often combined in larger packages 
 called cookbooks. For more details about the internal structure of chef, please
 refer to the first part of the vm automation.
 
-For the purposes of this presentation we are going to use a very simple
+For the purposes of this blog post we are going to use a very simple
 cookbook, that takes a list of packages and installs it on the new vm.
-It is developed by a Chef employee Matt Ray and is distributed unde the
+It is developed by a Chef employee Matt Ray and is distributed under the
 Apache License. It does not matter which distribution we choose to use,
 it will work on all of them, Chef takes care of the differences in
 package managers. By using a tool like Chef, we can ignore the underlying 
 differences in package managers, repositories and initialization scripts
-and focus at the job in hand. Chef allow us to describe very comples structures
+and focus at the job in hand. Chef allow us to describe very complex structures
 in a declarative way.
 
 
 ##Core chef concepts:
   
-  * Cookbook attributes
-  * The run_list
 
 ### Cookbook attributes
 
-One important feature of attributes is that they can be over-riden during runtime, both from the calling scripts and the cookbooks themselves.
+One important feature of attributes is that they can be overridden during runtime, both from the calling scripts and the cookbooks themselves.
 Cookbook attributes are saved inside the attributes directory, by default there is one file there called default.rb. In our example cookbook it contains two attributes:
 
     default['packages'] = []
@@ -133,7 +143,6 @@ Cookbook attributes are saved inside the attributes directory, by default there 
 
 These are the default values defined in the cookbook. An empty array list of packages and the default action of the cookbook.
 
-------------------------------------------------
 
 ### A chef run_list
 
@@ -142,7 +151,6 @@ A run-list is:
   * An ordered list of roles and/or recipes that are run in an exact order; if a recipe appears more than once in the run-list, the chef-client will never run that recipe twice
   * Always specific to the node on which it runs, though it is possible for many nodes to have run-lists that are similar or even identical 
   * Stored as part of the node object on the Chef server
-  * Maintained using knife and uploaded to the Chef server or via the Chef management console user interface
 
 In the chef-solo context, a run_list is limited to a specific chef-solo run and isolated on the vm it is running, it does not require any external chef resources (e.g chef server)
 
@@ -150,7 +158,7 @@ Plainly put, a run_list is the list of the recipes we want to execute from one o
 
 It looks like this: 
 
-    { "run_list": ["recipe[packages::default]", "recipe[anotherthing]"] }
+    { "run_list": ["recipe[packages::default]", "recipe[another thing]"] }
 
 # Vagrant-berkshelf
 
@@ -162,13 +170,14 @@ Vagrant-berkshelf is installed using the following command:
 
     vagrant plugin install vagrant-berkshelf
 
+
 # Vagrant
 
 Vagrant is a tool for building complete development environments. With an easy-to-use workflow and focus on automation. 
 
 It uses pre packaged templates called boxes as a starting point and is using an open extendable interface in order to provide more features in the form of plugins. Vagrant-berkshelf is one of those plugins, and that makes work with chef a lot easier. 
 
-There are a lot of freely available community vagrant boxes for any platform imaginable. In NCR Edinburgh we build our own from the official CentOS sources.
+There are a lot of freely available community vagrant boxes for any platform imaginable. In NCR Edinburgh we build our own from the official CentOS sources using Packer
 
 Vagrant supports out of the box a number of provisioners, among themselves chef and salt. In the following example we are going to use the chef provisioner.
 
@@ -178,9 +187,9 @@ Vagrant is controlled by a single file called Vagrantfile
 
   * Example Vagrantfiles can be found [here](https://github.com/patrickdlee/vagrant-examples)
 
-------------------------------------------------------------
 
 ## The most important vagrant commands
+
 
   * _vagrant plugin install plugin-name_ (installs vagrant plugins)
   * _vagrant up_ (imports the base box in the local vagrant repo, starts and provisions the new vm)
@@ -193,10 +202,13 @@ Vagrant is controlled by a single file called Vagrantfile
 
 All the vagrant vms appear as VirtualBox vms, so you can use VirtualBox interface to export a vm to and ova
 
---------------------------------------------------------------
+
+
 ## Vagrantfile
 
 A Vagrant file looks like this:
+
+    ```ruby
 
     # -*- mode: ruby -*-"
     # vi: set ft=ruby :
@@ -218,6 +230,8 @@ A Vagrant file looks like this:
       end
 
     end
+
+    ```
 
 We can see here, that the Vagrantfile syntax is actually a DSL (Domain Specific
 Language) it allows us to use a relatively simple, human readable, declarative
@@ -241,8 +255,10 @@ managers, packages and repos are handled under the hood by chef.
 
 The cookbook recipe we are executing with this vagrant file goes through the following operations:
 
+    ```ruby
+
     Chef::Log.info "packages:#{node['packages'].inspect}"
-    
+
     if node['packages'].is_a?(Array)
       node['packages'].each do |pkg|
         package pkg do
@@ -259,6 +275,7 @@ The cookbook recipe we are executing with this vagrant file goes through the fol
       Chef::Log.warn('`node["packages"]` must be an Array or Hash.')
     end
 
+    ```
 
 Chef recipes are also a ruby DSL, and even though it is not pure ruby they are 
 a bit more technical than Vagrant directives. Despite that, the recipes are also 
@@ -283,16 +300,15 @@ supports and can be used instead of Vagrant.
 However there are a few points that you may want to consider before using Packer
 for everything. 
 
-* Packer uses a configuration file that is written in json, and that makes it more difficult to edit manually and more easy to corrupt. 
-* Vagrant's DSL syntax is a lot easier to read and edit. 
+* Packer uses a configuration file that is written in json, and that makes it more difficult to edit manually and more easy to corrupt, if you are using a general purpose text editor. 
 * Packer is not as widely used and as extensible as Vagrant. 
-* Vagrant has a plugin interface, and that makes it easy to create and distribute all kind of plugins that can add support for different virtualization systems, different provisioning systems, cookbook management utilities (berkshelf). If we were using Packer we would have to preform all these steps manually or re-invent the wheel and implement our own
-tools to preform the steps automatically.
+* Vagrant has a plugin interface, and that makes it easy to create and distribute all kind of plugins that can add support for different virtualization systems, different provisioning systems, cookbook management utilities (berkshelf). If we were using Packer we would have to perform all these steps manually or re-invent the wheel and implement our own
+tools to perform the steps automatically.
 
 
 # Conclusion
 
-At this poing we should have a live virtual machine created from scratch by our 
+At this point we should have a live virtual machine created from scratch by our 
 scripts. We can log in to this vm and use it with the command 
 
     vagrant login
@@ -305,4 +321,5 @@ distributed to other systems, or members of our organization.
 This vm is completely disposable since it can be recreated at any moment through
  the use of the scripts either manually or through an automation system like 
  Jenkins.
+
 
